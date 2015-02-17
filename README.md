@@ -14,6 +14,6 @@ ratón y del teclado.
 Para ver ejemplos de uso, basta con abrir el proyecto en Netbeans y ejecutar
 algunos de sus tutoriales.
 
-También puedes echarle un vistazo al javadoc de la clase Ventana.
+También puedes echarle un vistazo al [javadoc de la clase Ventana](http://mario.site.ac.upc.edu/ventanas/Ventana.html).
 
 
