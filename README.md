@@ -16,4 +16,12 @@ algunos de sus tutoriales.
 
 También puedes echarle un vistazo al [javadoc de la clase Ventana](http://mario.site.ac.upc.edu/ventanas/Ventana.html).
 
+Some screenshots:
+
+![](shot1.jpg)
+
+![](shot2.jpg)
+
+![](shot3.jpg)
+
 
