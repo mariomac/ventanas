@@ -16,6 +16,8 @@ algunos de sus tutoriales.
 
 También puedes echarle un vistazo al [javadoc de la clase Ventana](http://mario.site.ac.upc.edu/ventanas/Ventana.html).
 
+Para ver un ejemplo de uso más complejo, puedes echar un vistazo a [MOO Pang!](https://github.com/mariomac/MOOPang)
+
 Some screenshots:
 
 ![](shot1.jpg)
