@@ -43,6 +43,8 @@ public class Ventana {
      * que se puede mostrar el lienzo por pantalla en un segundo.
      */
     private static final long FOTOGRAMAS_SEGUNDO = 30;
+    
+    private static final float INTERLINEADO = 1.1f;
 
     //dos lienzos para el double buffer
     private Image lienzo ;
@@ -266,14 +268,18 @@ public class Ventana {
      * @param color Color del texto.
      */
     public void escribeTexto(String texto, double x, double y, int medidaFuente, Color color) {
+        float interlinea = INTERLINEADO * (float) medidaFuente;
+        String[] lineas = texto.split("\n");
         camara.scale(1, -1);
         fg.setTransform(camara);
         fg.setColor(color);
         if(ultimoTamanyo != medidaFuente) {
-            ultimaFuente = new Font(Font.SANS_SERIF,Font.PLAIN,medidaFuente);
+            ultimaFuente = new Font(Font.MONOSPACED,Font.PLAIN,medidaFuente);
         }
         fg.setFont(ultimaFuente);
-        fg.drawString(texto, (float)x, (float)-y);
+        for(int i = 0 ; i < lineas.length ; i++) {
+            fg.drawString(lineas[i], (float)x, (float)-y + i * interlinea);
+        }
         camara.scale(1, -1);
         fg.setTransform(camara);
     }
