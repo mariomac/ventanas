@@ -1,0 +1,7 @@
+*.ipr
+.idea
+.nbproject/private
+build
+dist
+production
+test

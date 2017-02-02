@@ -11,14 +11,20 @@
  */
 package edu.upc.moo;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.*;
-import java.awt.image.BufferedImage;
+import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.SceneAntialiasing;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
 
 /**
  * <p>Esta clase oculta toda la complejidad que hay detrás de la creación de ventanas,
@@ -50,8 +56,6 @@ public class Ventana {
     private Image lienzo ;
     
     private Graphics2D fg;
-
-    private JFrame marcoVentana = null;
 
     private boolean up = false, down = false, left = false, right = false, space = false, escPulsado;
     private AffineTransform camara;
@@ -501,27 +505,142 @@ public class Ventana {
                 - ((double)mouseEventPos.getY() * campoVisionV) / lienzoAltura + campoVisionV / 2 + camY;
     }
     
-    
-    private MouseEvent mouseEventPos = null;
-    private class LectorRaton implements MouseListener, MouseMotionListener {
-        @Override 
-        public void mousePressed(MouseEvent me) {
-            ratonPulsado = true;
-        }
+    private void actualizaPosicion(MouseEvent event) {
+        ratonX = event.getSceneX();
+        ratonY = event.getSceneY();
+    }
+    private class LectorMovimientoRaton implements EventHandler<MouseEvent> {
         @Override
-        public void mouseReleased(MouseEvent me) {
-            ratonPulsado = false;
+        public void handle(MouseEvent event) {
+            actualizaPosicion(event);
         }
+    }
+    private class LectorPulsacionRaton implements EventHandler<MouseEvent> {
         @Override
-        public void mouseMoved(MouseEvent me) {
-            mouseEventPos = me;
+        public void handle(MouseEvent event) {
+            actualizaPosicion(event);
+            if(event.getButton() == MouseButton.PRIMARY) {
+                ratonPulsado = true;
+            }
         }
-        @Override public void mouseDragged(MouseEvent me) {
-            mouseEventPos = me;
+    }
+    private class LectorAbandonoPulsacionRaton implements EventHandler<MouseEvent> {
+        @Override
+        public void handle(MouseEvent event) {
+            actualizaPosicion(event);
+            if(event.getButton() == MouseButton.PRIMARY) {
+                ratonPulsado = false;
+            }
         }
-        
-        @Override public void mouseEntered(MouseEvent me) { }
-        @Override public void mouseExited(MouseEvent me) { }
-        @Override public void mouseClicked(MouseEvent me) {}
+    }
+
+    // AÑADIDO NUEVO
+    /**
+     * Clase estática subclase de Application
+     */
+    public class GUIApplication extends Application {
+
+        /**
+         * La escena del juego
+         */
+        Scene gameScene;
+        /**
+         * Una imagen del interfaz
+         */
+        Canvas sceneCanvas;
+
+        /**
+         * Contenedor para la interfaz gráfica de usuario
+         */
+        Stage primaryStage;
+
+        /**
+         * Inicia la interfaz gráfica de usuario.
+         * @throws Exception lanza un objeto Exception si se produce alguna
+         * situación anómala.
+         */
+        @Override
+        public void init() throws Exception {
+            super.init(); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        /**
+         * Da comienzo a la construcción y presentación del interfaz gráfico de usuario.
+         * Lee pulsaciones de teclas desde el teclado y las procesa, ordenando el dibujado
+         * o borrado de diferentes imágenes en el GUI.
+         * @param primaryStage el contenedor del GUI
+         * @throws Exception lanza una excepción si se produce alguna situación
+         * anómala.
+         */
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            this.primaryStage = primaryStage;
+            this.primaryStage.setOnCloseRequest(event -> System.exit(0));
+            primaryStage.setTitle("¡Escapada!");
+            Group root = new Group();
+            sceneCanvas = new Canvas(lienzoAltura, lienzoAnchura);
+
+            root.getChildren().add(sceneCanvas);
+            gameScene = new Scene(root, lienzoAltura, lienzoAltura, false, SceneAntialiasing.DISABLED);
+
+            gameScene.setOnKeyPressed( );
+            gameScene.setOnMouseMoved( new LectorMovimientoRaton() );
+            gameScene.setOnMouseReleased( new LectorAbandonoPulsacionRaton() );
+            gameScene.setOnMousePressed( new LectorPulsacionRaton());
+            primaryStage.setScene(gameScene);
+
+            ResizeListener rl = new ResizeListener();
+            primaryStage.widthProperty().addListener(rl);
+            primaryStage.heightProperty().addListener(rl);
+
+            resizeCanvas();
+
+            primaryStage.show();
+        }
+
+        /**
+         * Permite cambiar el tamaño de la imagen
+         */
+        void resizeCanvas() {
+            // TODO: Lo haremos moviendo la camara
+            double scaleX = gameScene.getWidth() / lienzoAnchura;
+            double scaleY = gameScene.getHeight() / lienzoAltura;
+            double scale = Math.min(scaleX, scaleY);
+            sceneCanvas.setScaleX(scale);
+            sceneCanvas.setScaleY(scale);
+            sceneCanvas.setTranslateX((gameScene.getWidth() - lienzoAnchura) / 2);
+            sceneCanvas.setTranslateY((gameScene.getHeight() - lienzoAltura) / 2);
+        }
+
+        private class ResizeListener implements ChangeListener<Number> {
+
+            /**
+             * Permite cambiar el tamaño de la ventana
+             */
+            @Override
+            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
+                resizeCanvas();
+            }
+        }
+
+        private boolean isLaunched = false;
+
+        void mostrar() {
+            if (!isLaunched) {
+                isLaunched = true;
+                //GUIApplication.launch(new String[0]);
+                Application.launch(GUIApplication.class, new String[0]);
+            }
+        }
+
+        public void mensaje(String texto) {
+            System.out.println(texto);
+        }
+
+        public void error(String texto) {
+            System.err.println(texto);
+        }
+
+
     }
 }
