@@ -11,18 +11,26 @@
  */
 package edu.upc.moo;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.SceneAntialiasing;
+import javafx.scene.*;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.transform.Affine;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,23 +60,23 @@ public class Ventana {
     
     private static final float INTERLINEADO = 1.1f;
 
-    //dos lienzos para el double buffer
-    private Image lienzo ;
-    
-    private Graphics2D fg;
-
     private boolean up = false, down = false, left = false, right = false, space = false, escPulsado;
-    private AffineTransform camara;
 
     private double camX, camY, campoVisionH, campoVisionV;
     private boolean dibujaCoordenadas = false;
     
     private double lienzoAnchura, lienzoAltura;
     private double aspectRatioH, aspectRatioV;
-    
+
     private double ratonX, ratonY;
     private boolean ratonPulsado;
-    private Color colorFondo = Color.black;
+    private Color colorFondo = Color.BLACK;
+
+    private Affine camara = new Affine();
+
+    private AtomicBoolean isLaunched = new AtomicBoolean(false);
+
+    private String titulo;
     /**
      * Crea una nueva ventana.<br/>
      * <b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.
@@ -81,43 +89,25 @@ public class Ventana {
      * Crea una nueva ventana.<br/>
      * <b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.
      * @param titulo El texto que aparecerá en la barra de título de la ventana.
-     * @param ancho Anchura de la ventana en píxels
-     * @param alto Altura de la ventana en píxels
+     * @param anchoPixels Anchura de la ventana en píxels
+     * @param altoPixels Altura de la ventana en píxels
      */
-    public Ventana(String titulo, int ancho, int alto) {
-        final JPanel pantalla = new JPanel();
-        marcoVentana = new JFrame(titulo) {
-                @Override
-                public void paint(Graphics g) {
-                    //super.paint(g);
-                    pantalla.getGraphics().drawImage(lienzo, 0, 0, null);
-                }
-            };
-        LectorRaton lr = new LectorRaton();
-        pantalla.addMouseListener(lr);
-        pantalla.addMouseMotionListener(lr);
-        marcoVentana.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        marcoVentana.addWindowListener(new ControladorVentana());
-        marcoVentana.setSize(ancho, alto);
-        marcoVentana.setResizable(false);
-        marcoVentana.setContentPane(pantalla);
-        marcoVentana.setVisible(true);
-        
-        Rectangle bounds = pantalla.getBounds();
-        lienzoAnchura = bounds.width;
-        lienzoAltura = bounds.height;
-        lienzo = new BufferedImage((int)lienzoAnchura, (int)lienzoAltura, BufferedImage.TYPE_INT_RGB);
-        fg = (Graphics2D)lienzo.getGraphics();                
-        
-        camara = new AffineTransform(0,0,1,0,0,1);
-        setCamara(0, 0, 20);
-        fg.setTransform(camara);
-        
-        //borrarLienzoOculto();
-        marcoVentana.addKeyListener(new LectorTeclas());
-
+    public Ventana(String titulo, int anchoPixels, int altoPixels) {
+        this.titulo = titulo;
+        this.lienzoAnchura = anchoPixels;
+        this.lienzoAltura = altoPixels;
+        new Thread(() -> {
+            if (!isLaunched.getAndSet(true)) {
+                Application.launch(GUIApplication.class, new String[0]);
+            }
+        }).start();
+        while(GUIApplication.instance == null) {
+            Thread.yield();
+        }
+        GUIApplication.instance.ventana = this;
+        System.out.println("Amos palla");
     }
-    
+
     /**
      * Cambia las coordenadas y el campo de visi&oacute;n de la c&aacute;mara.
      * @param centroX Posici&oacute;n X donde apunta el centro de la c&aacute;mara
@@ -136,15 +126,15 @@ public class Ventana {
         }
         campoVisionH = (tamanyoCampoVision * aspectRatioH);
         campoVisionV = (tamanyoCampoVision * aspectRatioV);
-                        
+
         double min = Math.min(lienzoAnchura / tamanyoCampoVision, lienzoAltura / tamanyoCampoVision);
+
         camara.setToIdentity();
         camara.translate(lienzoAnchura/2, lienzoAltura/2);
         camara.scale(min, -min);
         camara.translate(-centroX, -centroY);
-        
-        fg.setTransform(camara);
-        
+
+        GUIApplication.instance.getBackgroundPage().getGraphicsContext2D().setTransform(camara);
     }
     
     /**
@@ -216,53 +206,68 @@ public class Ventana {
     }    
     
     private void dibujaCoordenadas() {
-        Stroke last = fg.getStroke();        
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        Paint lastStroke = fg.getStroke();
+        double[] lastDashes = fg.getLineDashes();
+        double lastWidth = fg.getLineWidth();
 
-        float cv = (float)Math.min(campoVisionH,campoVisionV);
-        Stroke flojo = new BasicStroke((float)(0.5/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 1.0f/cv, 5.0f/cv }, 0.0f);
-        Stroke medio = new BasicStroke((float)(1/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 4.0f/cv, 5.0f/cv }, 0.0f);
-        Stroke gordo = new BasicStroke((float)(1.3/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 6f/cv, 2f/cv }, 0.0f);
-        fg.setColor(Color.white);
-        Line2D.Double l = new Line2D.Double();
+        double cv = Math.min(campoVisionH,campoVisionV);
+
+        double anchoFlojo = 0.5/cv;
+        double anchoMedio = 1/cv;
+        double anchoGordo = 1.3/cv;
+        double[] dashesFlojo = new double[] { 1.0/cv, 5.0/cv };
+        double[] dashesMedio = new double[] { 4.0/cv, 5.0/cv };
+        double[] dashesGordo = new double[] { 6.0/cv, 2.0/cv };
+
+        fg.setStroke(Color.WHITE);
+
         for(int x = (int) (camX - campoVisionH / 2) ; x <= (int) (camX + campoVisionH / 2) ; x++) {
             if(x % 10 == 0) {
-                fg.setStroke(gordo);
-                escribeTexto(String.valueOf(x), x + 0.1, camY + campoVisionV / 2 - 1.1, 1, Color.white);
+                fg.setLineWidth(anchoGordo);
+                fg.setLineDashes(dashesGordo[0], dashesGordo[1]);
+                escribeTexto(String.valueOf(x), x + 0.1, camY + campoVisionV / 2 - 1.1, 1, Color.WHITE);
 
             } else if(x % 5 == 0) {
-                fg.setStroke(medio);
+                fg.setLineWidth(anchoMedio);
+                fg.setLineDashes(dashesMedio[0], dashesMedio[1]);
             } else {
-                fg.setStroke(flojo);
+                fg.setLineWidth(anchoFlojo);
+                fg.setLineDashes(dashesMedio[0], dashesFlojo[1]);
             }
-            l.setLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);            
-            fg.draw(l);
-            //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
-        }   
+            fg.strokeLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);
+        }
         for(int y = (int) (camY - campoVisionV / 2) ; y <= (int) (camY + campoVisionV / 2) ; y++) {
             if(y % 10 == 0) {
-                fg.setStroke(gordo);
-                escribeTexto(String.valueOf(y),  camX - campoVisionH / 2 + 0.1, y + 0.1, 1, Color.white);
+                fg.setLineWidth(anchoGordo);
+                fg.setLineDashes(dashesGordo[0], dashesGordo[1]);
+                escribeTexto(String.valueOf(y),  camX - campoVisionH / 2 + 0.1, y + 0.1, 1, Color.WHITE);
             } else if(y % 5 == 0) {
-                fg.setStroke(medio);
+                fg.setLineWidth(anchoMedio);
+                fg.setLineDashes(dashesMedio[0], dashesMedio[1]);
             } else {
-                fg.setStroke(flojo);
+                fg.setLineWidth(anchoFlojo);
+                fg.setLineDashes(dashesMedio[0], dashesFlojo[1]);
             }
-            l.setLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);            
-            fg.draw(l);
-            //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
-        }            
-        fg.setStroke(last);
+            fg.strokeLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);
+        }
+        fg.setStroke(lastStroke);
+        fg.setLineWidth(lastWidth);
+        fg.setLineDashes(lastDashes);
     }
 
     /**
      * Cierra la ventana.
      */
     public void cerrar() {
-        marcoVentana.dispose();
+        GUIApplication.instance.primaryStage.close();
     }
 
     private int ultimoTamanyo = 0;
-    private Font ultimaFuente = new Font(Font.SANS_SERIF,Font.PLAIN,12);;
+
+    private static final String SANS_SERIF = "sans-serif";
+
+    private Font ultimaFuente = Font.font("sant-serif", FontPosture.REGULAR, 12);
     /**
      * Escribe un texto por pantalla.
      * @param texto El texto a escribir.
@@ -272,18 +277,17 @@ public class Ventana {
      * @param color Color del texto.
      */
     public void escribeTexto(String texto, double x, double y, int medidaFuente, Color color) {
+        while(GUIApplication.instance == null) Thread.yield();
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
         float interlinea = INTERLINEADO * (float) medidaFuente;
-        String[] lineas = texto.split("\n");
         camara.scale(1, -1);
         fg.setTransform(camara);
-        fg.setColor(color);
+        fg.setStroke(color);
         if(ultimoTamanyo != medidaFuente) {
-            ultimaFuente = new Font(Font.MONOSPACED,Font.PLAIN,medidaFuente);
+            ultimaFuente = Font.font(SANS_SERIF, FontPosture.REGULAR, medidaFuente);
         }
         fg.setFont(ultimaFuente);
-        for(int i = 0 ; i < lineas.length ; i++) {
-            fg.drawString(lineas[i], (float)x, (float)-y + i * interlinea);
-        }
+        fg.strokeText(texto, (float)x, (float)-y);
         camara.scale(1, -1);
         fg.setTransform(camara);
     }
@@ -296,14 +300,15 @@ public class Ventana {
      * @param color Color del triángulo.
      */
     public void dibujaTriangulo(double x1, double y1, double x2, double y2, double x3, double y3, Color color){
-        fg.setColor(color);        
-        Path2D.Double t = new Path2D.Double();
-        
-        t.moveTo(x1, y1);
-        t.lineTo(x2, y2);
-        t.lineTo(x3, y3);
-        t.lineTo(x1, y1);
-        fg.fill(t);        
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        fg.setFill(color);
+
+        fg.beginPath();
+        fg.moveTo(x1, y1);
+        fg.lineTo(x2, y2);
+        fg.lineTo(x3, y3);
+        fg.lineTo(x1, y1);
+        fg.fill();
     }
     
     /**
@@ -314,13 +319,12 @@ public class Ventana {
      * @param color Color de la línea
      */
     public void dibujaLinea(double x1, double y1, double x2, double y2, double grosor, Color color) {
-        Stroke last = fg.getStroke();        
-        fg.setColor(color);
-        fg.setStroke(new BasicStroke((float)grosor,BasicStroke.CAP_BUTT,BasicStroke.JOIN_MITER));
-        Line2D.Double l = new Line2D.Double();
-        l.setLine(x1, y1, x2, y2);
-        fg.draw(l);
-        fg.setStroke(last);
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        double last = fg.getLineWidth();
+        fg.setStroke(color);
+        fg.setLineWidth(grosor);
+        fg.strokeLine(x1, y1, x2, y2);
+        fg.setLineWidth(last);
     }
     /**
      * Dibuja un rectángulo en pantalla, dadas las coordenadas de su esquina superior izquierda,
@@ -333,8 +337,9 @@ public class Ventana {
      * @param color Color del rectángulo.
      */
     public void dibujaRectangulo(double izquierda, double arriba, double ancho, double alto, Color color) {
-        fg.setColor(color);
-        fg.fill(new Rectangle2D.Double(izquierda, arriba - alto, ancho, alto));
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        fg.setStroke(color);
+        fg.fillRect(izquierda, arriba - alto, ancho, alto);
     }
 
     /**
@@ -345,8 +350,9 @@ public class Ventana {
      * @param color Color del círculo.
      */
     public void dibujaCirculo(double centroX, double centroY, double radio, Color color) {
-        fg.setColor(color);
-        fg.fill(new Ellipse2D.Double((centroX - radio), (centroY - radio), (radio*2),(radio*2)));
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        fg.setStroke(color);
+        fg.fillOval((centroX - radio), (centroY - radio), (radio*2),(radio*2));
     }
 
     /**
@@ -357,20 +363,14 @@ public class Ventana {
     public void actualizaFotograma() {
         //dibuja cuadricula
         if(dibujaCoordenadas) dibujaCoordenadas();
-        
-        // muestra el buffer
-        marcoVentana.repaint();
 
-        espera();
-        
-        //borra el buffer
-        fg.setTransform(identity);        
-        fg.setColor(colorFondo);
+        GUIApplication.instance.flipPage();
+        GraphicsContext fg = GUIApplication.instance.getBackgroundPage().getGraphicsContext2D();
+        fg.setTransform(camara);
+        fg.setStroke(colorFondo);
         fg.fillRect(0, 0, (int)lienzoAnchura, (int)lienzoAltura);
         fg.setTransform(camara);
-        
-
-        
+        espera();
     }
 
     /**
@@ -381,10 +381,6 @@ public class Ventana {
     public void setColorFondo(Color colorFondo) {
         this.colorFondo = colorFondo;
     }
-    
-    
-    
-    private AffineTransform identity = new AffineTransform();
 
     private long lastFrameTime = 0;
 
@@ -403,76 +399,114 @@ public class Ventana {
         lastFrameTime = System.currentTimeMillis();
     }
 
-    private class ControladorVentana implements WindowListener {
-        public void windowClosed(WindowEvent e) {
+    private class ControladorVentana implements EventHandler<WindowEvent> {
+        @Override
+        public void handle(WindowEvent event) {
+            if(event.getEventType() == WindowEvent.WINDOW_CLOSE_REQUEST) {
+                cerrar();
+            }
         }
-        public void windowActivated(WindowEvent e) {}
-        public void windowClosing(WindowEvent e) {
-            cerrar();
-        }
-        public void windowDeactivated(WindowEvent e) {}
-        public void windowDeiconified(WindowEvent e) {}
-        public void windowIconified(WindowEvent e) {}
-        public void windowOpened(WindowEvent e) {}
     }
 
-    private class LectorTeclas implements KeyListener {
+    private static class ControlTeclado implements EventHandler<KeyEvent> {
         private boolean spaceReleased = true;
+        private Ventana ventana;
 
-        public void keyTyped(KeyEvent e) {
-    
+        public ControlTeclado(Ventana ventana) {
+            this.ventana = ventana;
         }
 
+        @Override
+        public void handle(KeyEvent event) {
+            if(event.getEventType() == KeyEvent.KEY_PRESSED) {
+                keyPressed(event);
+            } else if(event.getEventType() == KeyEvent.KEY_RELEASED) {
+                keyReleased(event);
+            }
+        }
+
+
         public void keyPressed(KeyEvent e) {
-            switch(e.getKeyCode()) {
-                case KeyEvent.VK_UP:
-                    up = true;
+            switch(e.getCode()) {
+                case UP:
+                case KP_UP:
+                    ventana.up = true;
                     break;
-                case KeyEvent.VK_DOWN:
-                    down = true;
+                case DOWN:
+                case KP_DOWN:
+                    ventana.down = true;
                     break;
-                case KeyEvent.VK_LEFT:
-                    left = true;
+                case LEFT:
+                case KP_LEFT:
+                    ventana.left = true;
                     break;
-                case KeyEvent.VK_RIGHT:
-                    right = true;
+                case RIGHT:
+                case KP_RIGHT:
+                    ventana.right = true;
                     break;
-                case KeyEvent.VK_SPACE:
+                case SPACE:
                     if (spaceReleased) {
-                        space = true;
+                        ventana.space = true;
                     }
                     spaceReleased = false;
                     break;
-                case KeyEvent.VK_ESCAPE:
-                    escPulsado = true;
+                case ESCAPE:
+                    ventana.escPulsado = true;
                     break;
-                case KeyEvent.VK_F1:
-                    dibujaCoordenadas = !dibujaCoordenadas;
+                case F1:
+                    ventana.dibujaCoordenadas = !ventana.dibujaCoordenadas;
                     break;
             }
         }
 
         public void keyReleased(KeyEvent e) {
-            switch(e.getKeyCode()) {
-                case KeyEvent.VK_UP:
-                    up = false;
+            switch(e.getCode()) {
+                case UP:
+                case KP_UP:
+                    ventana.up = false;
                     break;
-                case KeyEvent.VK_DOWN:
-                    down = false;
+                case DOWN:
+                case KP_DOWN:
+                    ventana.down = false;
                     break;
-                case KeyEvent.VK_LEFT:
-                    left = false;
+                case LEFT:
+                case KP_LEFT:
+                    ventana.left = false;
                     break;
-                case KeyEvent.VK_RIGHT:
-                    right = false;
+                case RIGHT:
+                case KP_RIGHT:
+                    ventana.right = false;
                     break;
-                case KeyEvent.VK_SPACE:
+                case SPACE:
                     spaceReleased = true;
-                    space = false;
+                    ventana.space = false;
+                    break;
+                case ESCAPE:
+                    ventana.escPulsado = false;
                     break;
             }
         }
 
+    }
+
+    private static class ControlRaton implements EventHandler<MouseEvent> {
+        Ventana ventana;
+
+        public ControlRaton(Ventana ventana) {
+            this.ventana = ventana;
+        }
+
+        @Override
+        public void handle(MouseEvent event) {
+            ventana.actualizaPosicion(event);
+            if(event.getButton() == MouseButton.PRIMARY) {
+                if(event.getEventType().equals(MouseEvent.MOUSE_PRESSED)) {
+                    ventana.ratonPulsado = true;
+                } else if(event.getEventType().equals(MouseEvent.MOUSE_RELEASED)) {
+                    ventana.ratonPulsado = false;
+                }
+            }
+        }
     }
 
     /**
@@ -492,8 +526,7 @@ public class Ventana {
      * @return la coordenada X del rat&oacute;n
      */
     public double getRatonX() {
-        return mouseEventPos == null ? 0 :
-                ((double)mouseEventPos.getX() * campoVisionH) / lienzoAnchura - campoVisionH / 2 + camX;
+        return ratonX;
     }
 
     /**
@@ -501,44 +534,22 @@ public class Ventana {
      * @return la coordenada Y del rat&oacute;n
      */    
     public double getRatonY() {
-        return mouseEventPos == null ? 0 :
-                - ((double)mouseEventPos.getY() * campoVisionV) / lienzoAltura + campoVisionV / 2 + camY;
+        return ratonY;
     }
     
     private void actualizaPosicion(MouseEvent event) {
         ratonX = event.getSceneX();
         ratonY = event.getSceneY();
     }
-    private class LectorMovimientoRaton implements EventHandler<MouseEvent> {
-        @Override
-        public void handle(MouseEvent event) {
-            actualizaPosicion(event);
-        }
-    }
-    private class LectorPulsacionRaton implements EventHandler<MouseEvent> {
-        @Override
-        public void handle(MouseEvent event) {
-            actualizaPosicion(event);
-            if(event.getButton() == MouseButton.PRIMARY) {
-                ratonPulsado = true;
-            }
-        }
-    }
-    private class LectorAbandonoPulsacionRaton implements EventHandler<MouseEvent> {
-        @Override
-        public void handle(MouseEvent event) {
-            actualizaPosicion(event);
-            if(event.getButton() == MouseButton.PRIMARY) {
-                ratonPulsado = false;
-            }
-        }
-    }
 
     // AÑADIDO NUEVO
     /**
      * Clase estática subclase de Application
      */
-    public class GUIApplication extends Application {
+    protected static class GUIApplication extends Application {
+
+        static GUIApplication instance;
+        Ventana ventana = null;
 
         /**
          * La escena del juego
@@ -547,22 +558,22 @@ public class Ventana {
         /**
          * Una imagen del interfaz
          */
-        Canvas sceneCanvas;
+        Canvas[] sceneCanvas = new Canvas[2]; // dos canvas para page flipping
 
         /**
          * Contenedor para la interfaz gráfica de usuario
          */
         Stage primaryStage;
 
-        /**
-         * Inicia la interfaz gráfica de usuario.
-         * @throws Exception lanza un objeto Exception si se produce alguna
-         * situación anómala.
-         */
-        @Override
-        public void init() throws Exception {
-            super.init(); //To change body of generated methods, choose Tools | Templates.
+        Group sceneRoot;
+
+        int backgroundPage = 0;
+
+        public GUIApplication() {
+            instance = this;
         }
+
+        PageFlipper flipperTimer;
 
         /**
          * Da comienzo a la construcción y presentación del interfaz gráfico de usuario.
@@ -574,19 +585,29 @@ public class Ventana {
          */
         @Override
         public void start(Stage primaryStage) throws Exception {
+            while(ventana == null) {
+                Thread.yield();
+            }
             this.primaryStage = primaryStage;
             this.primaryStage.setOnCloseRequest(event -> System.exit(0));
-            primaryStage.setTitle("¡Escapada!");
-            Group root = new Group();
-            sceneCanvas = new Canvas(lienzoAltura, lienzoAnchura);
+            primaryStage.setTitle(ventana.titulo);
+            sceneRoot = new Group();
+            sceneCanvas[0] = new Canvas(ventana.lienzoAltura, ventana.lienzoAnchura);
+            sceneCanvas[1] = new Canvas(ventana.lienzoAltura, ventana.lienzoAnchura);
 
-            root.getChildren().add(sceneCanvas);
-            gameScene = new Scene(root, lienzoAltura, lienzoAltura, false, SceneAntialiasing.DISABLED);
+            sceneRoot.getChildren().add(sceneCanvas[0]);
+            backgroundPage = 1;
 
-            gameScene.setOnKeyPressed( );
-            gameScene.setOnMouseMoved( new LectorMovimientoRaton() );
-            gameScene.setOnMouseReleased( new LectorAbandonoPulsacionRaton() );
-            gameScene.setOnMousePressed( new LectorPulsacionRaton());
+            gameScene = new Scene(sceneRoot, ventana.lienzoAltura, ventana.lienzoAltura, false, SceneAntialiasing.DISABLED);
+
+            ControlTeclado ct = new ControlTeclado(ventana);
+            gameScene.setOnKeyPressed( ct );
+            gameScene.setOnKeyReleased( ct );
+
+            ControlRaton cr = new ControlRaton(ventana);
+            gameScene.setOnMouseMoved( cr );
+            gameScene.setOnMouseReleased( cr );
+            gameScene.setOnMousePressed( cr );
             primaryStage.setScene(gameScene);
 
             ResizeListener rl = new ResizeListener();
@@ -595,21 +616,50 @@ public class Ventana {
 
             resizeCanvas();
 
+            flipperTimer = new PageFlipper();
             primaryStage.show();
+            flipperTimer.start();
+
+            GUIApplication.instance = this;
+        }
+
+        @Override
+        public void stop() throws Exception {
+            flipperTimer.stop();
+            super.stop();
+        }
+
+        class PageFlipper extends AnimationTimer {
+            @Override
+            public void handle(long now) {
+                if(flipPage.compareAndSet(true, false)) {
+                    sceneRoot.getChildren().remove(sceneCanvas[(backgroundPage + 1) % 2]);
+                    sceneRoot.getChildren().add(sceneCanvas[backgroundPage]);
+                    backgroundPage = (backgroundPage + 1) % 2;
+                }
+            }
         }
 
         /**
          * Permite cambiar el tamaño de la imagen
          */
         void resizeCanvas() {
-            // TODO: Lo haremos moviendo la camara
-            double scaleX = gameScene.getWidth() / lienzoAnchura;
-            double scaleY = gameScene.getHeight() / lienzoAltura;
+            double scaleX = gameScene.getWidth() / ventana.lienzoAnchura;
+            double scaleY = gameScene.getHeight() / ventana.lienzoAltura;
             double scale = Math.min(scaleX, scaleY);
-            sceneCanvas.setScaleX(scale);
-            sceneCanvas.setScaleY(scale);
-            sceneCanvas.setTranslateX((gameScene.getWidth() - lienzoAnchura) / 2);
-            sceneCanvas.setTranslateY((gameScene.getHeight() - lienzoAltura) / 2);
+            getBackgroundPage().setScaleX(scale);
+            getBackgroundPage().setScaleY(scale);
+            getBackgroundPage().setTranslateX((gameScene.getWidth() - ventana.lienzoAnchura) / 2);
+            getBackgroundPage().setTranslateY((gameScene.getHeight() - ventana.lienzoAltura) / 2);
+        }
+
+        public Canvas getBackgroundPage() {
+            return sceneCanvas[backgroundPage];
+        }
+
+        AtomicBoolean flipPage = new AtomicBoolean(false);
+        public void flipPage() {
+            flipPage.set(true);
         }
 
         private class ResizeListener implements ChangeListener<Number> {
@@ -623,16 +673,6 @@ public class Ventana {
             }
         }
 
-        private boolean isLaunched = false;
-
-        void mostrar() {
-            if (!isLaunched) {
-                isLaunched = true;
-                //GUIApplication.launch(new String[0]);
-                Application.launch(GUIApplication.class, new String[0]);
-            }
-        }
-
         public void mensaje(String texto) {
             System.out.println(texto);
         }
@@ -640,7 +680,5 @@ public class Ventana {
         public void error(String texto) {
             System.err.println(texto);
         }
-
-
     }
 }

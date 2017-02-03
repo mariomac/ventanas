@@ -12,7 +12,7 @@
 package edu.upc.moo.tutoriales;
 
 import edu.upc.moo.Ventana;
-import java.awt.Color;
+import javafx.scene.paint.Color;
 
 public class Tutorial4_Camara {
     public static void main(String[] args) {
@@ -29,8 +29,8 @@ public class Tutorial4_Camara {
         v.setDibujaCoordenadas(true);
         
         while(!v.isPulsadoEscape()) {
-            v.dibujaCirculo(0, 3, 3, Color.red);
-            v.escribeTexto("Pulsa ESC para empezar a mover camara", -10, -2, 1, Color.yellow);
+            v.dibujaCirculo(0, 3, 3, Color.RED);
+            v.escribeTexto("Pulsa ESC para empezar a mover camara", -10, -2, 1, Color.YELLOW);
             v.actualizaFotograma();
         }
 
@@ -44,8 +44,8 @@ public class Tutorial4_Camara {
             contador += 0.1; // cuanto más sumemos a "contador", más rápido girará
             // Movemos la cámara a las nuevas coordenadas
             v.setCamara(camX, camY, campoVision);
-            v.dibujaCirculo(0, 3, 3, Color.red);
-            v.escribeTexto("Pulsa ESC para cambiar zoom de la cámara", -10, -2, 1, Color.yellow);
+            v.dibujaCirculo(0, 3, 3, Color.RED);
+            v.escribeTexto("Pulsa ESC para cambiar zoom de la cámara", -10, -2, 1, Color.YELLOW);
             v.actualizaFotograma();
         }
         
@@ -56,8 +56,8 @@ public class Tutorial4_Camara {
             contador += 0.1;
 
             v.setCamara(camX, camY, campoVision);
-            v.dibujaCirculo(0, 3, 3, Color.red);
-            v.escribeTexto("Pulsa ESC para combinar zoom y movimiento", -10, -2, 1, Color.yellow);
+            v.dibujaCirculo(0, 3, 3, Color.RED);
+            v.escribeTexto("Pulsa ESC para combinar zoom y movimiento", -10, -2, 1, Color.YELLOW);
             v.actualizaFotograma();            
         }
         
@@ -70,8 +70,8 @@ public class Tutorial4_Camara {
             contador += 0.1;
 
             v.setCamara(camX, camY, campoVision);
-            v.dibujaCirculo(0, 3, 3, Color.red);
-            v.escribeTexto("Pulsa ESC para finalizar", -10, -2, 1, Color.yellow);
+            v.dibujaCirculo(0, 3, 3, Color.RED);
+            v.escribeTexto("Pulsa ESC para finalizar", -10, -2, 1, Color.YELLOW);
             v.actualizaFotograma();
         }        
         

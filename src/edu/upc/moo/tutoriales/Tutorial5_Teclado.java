@@ -12,7 +12,8 @@
 package edu.upc.moo.tutoriales;
 
 import edu.upc.moo.Ventana;
-import java.awt.Color;
+import javafx.scene.paint.Color;
+
 import java.util.Random;
 
 public class Tutorial5_Teclado {
@@ -25,7 +26,7 @@ public class Tutorial5_Teclado {
         // Coordenadas del círculo que moveremos
         double posX = 0, posY = 0;
         double velocidad = 0.4;
-        Color colorBola = Color.blue;
+        Color colorBola = Color.BLUE;
         v.setCamara(0, 0, 40);
         
         while(!v.isPulsadoEscape()) {
@@ -34,7 +35,7 @@ public class Tutorial5_Teclado {
             if(v.isPulsadoDerecha()) posX += velocidad;
             if(v.isPulsadoIzquierda()) posX -= velocidad;
             if(v.isPulsadoEspacio()) {
-                colorBola = new Color(rnd.nextInt());
+                colorBola = new Color(rnd.nextFloat(), rnd.nextFloat(), rnd.nextFloat(), 1);
             }
             v.dibujaCirculo(posX, posY, 3, colorBola);
             

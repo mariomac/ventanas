@@ -12,7 +12,7 @@
 package edu.upc.moo.tutoriales;
 
 import edu.upc.moo.Ventana;
-import java.awt.Color;
+import javafx.scene.paint.Color;
 
 public class Tutorial1_HolaMundo {
     public static void main(String[] args) {
@@ -21,9 +21,9 @@ public class Tutorial1_HolaMundo {
         // Mientras no se pulsa la tecla ESCAPE, se redibuja siempre lo mismo en pantalla
         while(!v.isPulsadoEscape()) {
             // Se escribe algo en el fotograma
-            v.escribeTexto("Hola, mundo!", -9.5, 7, 2, Color.yellow);
-            v.escribeTexto("Pulsa F1 para mostrar/ocultar coordenadas", -9, 5.5, 1, Color.yellow);
-            v.escribeTexto("Pulsa ESC para terminar", -9, 4, 1, Color.yellow);
+            v.escribeTexto("Hola, mundo!", -9.5, 7, 2, Color.YELLOW);
+            v.escribeTexto("Pulsa F1 para mostrar/ocultar coordenadas", -9, 5.5, 1,Color.YELLOW);
+            v.escribeTexto("Pulsa ESC para terminar", -9, 4, 1, Color.YELLOW);
             // Muestra el fotograma anterior, y crea uno nuevo
             v.actualizaFotograma();
         }   

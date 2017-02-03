@@ -12,7 +12,7 @@
 package edu.upc.moo.tutoriales;
 
 import edu.upc.moo.Ventana;
-import java.awt.Color;
+import javafx.scene.paint.Color;
 
 public class Tutorial2_Figuras {
     public static void main(String[] args) {
@@ -20,16 +20,16 @@ public class Tutorial2_Figuras {
         Ventana v = new Ventana("Tutorial 2: Figuras geométricas");
         // Mientras no se pulsa la tecla ESCAPE, se redibuja siempre lo mismo en pantalla
         while(!v.isPulsadoEscape()) {
-            v.dibujaCirculo(-5, 5, 5, Color.red);
-            v.dibujaTriangulo(5, 10, 10, 0, 0, 0, Color.yellow);
-            v.dibujaRectangulo(-10,0,10,10, Color.blue);
+            v.dibujaCirculo(-5, 5, 5, Color.RED);
+            v.dibujaTriangulo(5, 10, 10, 0, 0, 0, Color.YELLOW);
+            v.dibujaRectangulo(-10,0,10,10, Color.BLUE);
             // se pueden dibujar lineas de diferente grosor
             double grosor = 0.1;
             for(double x = 0; x < 10 ; x += grosor * 2) {
-                v.dibujaLinea(x, 0, x, -10, grosor, Color.green);
+                v.dibujaLinea(x, 0, x, -10, grosor, Color.GREEN);
                 grosor *= 1.5;
             }
-            v.escribeTexto("(Pulsa ESC para terminar)", -10, -9, 1, Color.white);
+            v.escribeTexto("(Pulsa ESC para terminar)", -10, -9, 1, Color.WHITE);
             // Muestra el fotograma anterior, y crea uno nuevo
             v.actualizaFotograma();
         }   

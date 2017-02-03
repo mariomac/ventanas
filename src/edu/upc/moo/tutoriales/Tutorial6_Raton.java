@@ -12,7 +12,8 @@
 package edu.upc.moo.tutoriales;
 
 import edu.upc.moo.Ventana;
-import java.awt.Color;
+import javafx.scene.paint.Color;
+
 import java.util.Random;
 
 public class Tutorial6_Raton {
@@ -24,14 +25,14 @@ public class Tutorial6_Raton {
         
         // Coordenadas del círculo que moveremos
         double posX = 0, posY = 0;
-        Color colorBola = Color.blue;
+        Color colorBola = Color.BLUE;
         v.setCamara(0, 0, 40);
         
         while(!v.isPulsadoEscape()) {
             posX = v.getRatonX();
             posY = v.getRatonY();
             if(v.isRatonPulsado()) {
-                colorBola = new Color(rnd.nextInt());
+                colorBola = new Color(rnd.nextDouble(),rnd.nextDouble(),rnd.nextDouble(),1);
             }
             v.dibujaCirculo(posX, posY, 3, colorBola);
             
