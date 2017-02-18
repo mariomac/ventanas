@@ -23,7 +23,8 @@ public class Tutorial1_HolaMundo {
             // Se escribe algo en el fotograma
             v.escribeTexto("Hola, mundo!", -9.5, 7, 2, Color.yellow);
             v.escribeTexto("Pulsa F1 para mostrar/ocultar coordenadas", -9, 5.5, 1, Color.yellow);
-            v.escribeTexto("Pulsa ESC para terminar", -9, 4, 1, Color.yellow);
+            v.escribeTexto("Pulsa F2 para activar/desactivar suavizado", -9, 4, 1, Color.yellow);
+            v.escribeTexto("Pulsa ESC para\nterminar", -9, 2.5, 1, Color.yellow);
             // Muestra el fotograma anterior, y crea uno nuevo
             v.actualizaFotograma();
         }   

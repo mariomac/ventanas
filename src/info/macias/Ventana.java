@@ -322,42 +322,44 @@ public class Ventana {
     }
 
     private void dibujaCoordenadas() {
-        Stroke last = fg.getStroke();
+        synchronized (fg) {
+            Stroke last = fg.getStroke();
 
-        float cv = (float)Math.min(campoVisionH,campoVisionV);
-        Stroke flojo = new BasicStroke((float)(0.5/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 1.0f/cv, 5.0f/cv }, 0.0f);
-        Stroke medio = new BasicStroke((float)(1/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 4.0f/cv, 5.0f/cv }, 0.0f);
-        Stroke gordo = new BasicStroke((float)(1.3/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 6f/cv, 2f/cv }, 0.0f);
-        fg.setColor(Color.white);
-        Line2D.Double l = new Line2D.Double();
-        for(int x = (int) (camX - campoVisionH / 2) ; x <= (int) (camX + campoVisionH / 2) ; x++) {
-            if(x % 10 == 0) {
-                fg.setStroke(gordo);
-                escribeTexto(String.valueOf(x), x + 0.1, camY + campoVisionV / 2 - 1.1, 1, Color.white);
+            float cv = (float) Math.min(campoVisionH, campoVisionV);
+            Stroke flojo = new BasicStroke((float) (0.5 / cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[]{1.0f / cv, 5.0f / cv}, 0.0f);
+            Stroke medio = new BasicStroke((float) (1 / cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[]{4.0f / cv, 5.0f / cv}, 0.0f);
+            Stroke gordo = new BasicStroke((float) (1.3 / cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[]{6f / cv, 2f / cv}, 0.0f);
+            fg.setColor(Color.white);
+            Line2D.Double l = new Line2D.Double();
+            for (int x = (int) (camX - campoVisionH / 2); x <= (int) (camX + campoVisionH / 2); x++) {
+                if (x % 10 == 0) {
+                    fg.setStroke(gordo);
+                    escribeTexto(String.valueOf(x), x + 0.1, camY + campoVisionV / 2 - 1.1, 1, Color.white);
 
-            } else if(x % 5 == 0) {
-                fg.setStroke(medio);
-            } else {
-                fg.setStroke(flojo);
+                } else if (x % 5 == 0) {
+                    fg.setStroke(medio);
+                } else {
+                    fg.setStroke(flojo);
+                }
+                l.setLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);
+                fg.draw(l);
+                //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
             }
-            l.setLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);
-            fg.draw(l);
-            //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
-        }
-        for(int y = (int) (camY - campoVisionV / 2) ; y <= (int) (camY + campoVisionV / 2) ; y++) {
-            if(y % 10 == 0) {
-                fg.setStroke(gordo);
-                escribeTexto(String.valueOf(y),  camX - campoVisionH / 2 + 0.1, y + 0.1, 1, Color.white);
-            } else if(y % 5 == 0) {
-                fg.setStroke(medio);
-            } else {
-                fg.setStroke(flojo);
+            for (int y = (int) (camY - campoVisionV / 2); y <= (int) (camY + campoVisionV / 2); y++) {
+                if (y % 10 == 0) {
+                    fg.setStroke(gordo);
+                    escribeTexto(String.valueOf(y), camX - campoVisionH / 2 + 0.1, y + 0.1, 1, Color.white);
+                } else if (y % 5 == 0) {
+                    fg.setStroke(medio);
+                } else {
+                    fg.setStroke(flojo);
+                }
+                l.setLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);
+                fg.draw(l);
+                //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
             }
-            l.setLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);
-            fg.draw(l);
-            //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
+            fg.setStroke(last);
         }
-        fg.setStroke(last);
     }
 
     /**
@@ -387,18 +389,13 @@ public class Ventana {
         String[] lineas = texto.split("\n");
         fg.setColor(color);
 
-        AffineTransform posicion = (AffineTransform) camara.clone();
-        posicion.translate(x, y);
-        posicion.scale(altoFuente/TAMAÑO_FUENTE_BASE, -altoFuente/TAMAÑO_FUENTE_BASE);
-        fg.setTransform(posicion);
-
         for(int i = 0 ; i < lineas.length ; i++) {
             Shape txt = font.createGlyphVector(fontRenderContext, lineas[i]).getOutline();
+            AffineTransform posicion = (AffineTransform) camara.clone();
+            posicion.translate(x, y - i * INTERLINEADO);
+            posicion.scale(altoFuente/TAMAÑO_FUENTE_BASE, -altoFuente/TAMAÑO_FUENTE_BASE);
+            fg.setTransform(posicion);
             fg.fill(txt);
-            posicion.translate(0, interlinea);
-
-            //
-//            fg.drawString(lineas[i], (float)x, (float)-y + i * interlinea);
         }
         fg.setTransform(camara);
     }
@@ -564,6 +561,14 @@ public class Ventana {
                 case KeyEvent.VK_F1:
                     dibujaCoordenadas = !dibujaCoordenadas;
                     break;
+                case KeyEvent.VK_F2:
+                    synchronized (fg) {
+                        if (fg.getRenderingHint(RenderingHints.KEY_ANTIALIASING) == RenderingHints.VALUE_ANTIALIAS_ON) {
+                            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+                        } else {
+                            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        }
+                    }
             }
         }
 

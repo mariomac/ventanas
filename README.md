@@ -26,7 +26,7 @@ Some screenshots:
 
 ![](shot3.jpg)
 
-![](shot4.png)
+![](shot4.jpg)
 
 Si te gustan mis aportaciones a github, quizás te gustará mi libro [Del bit a la Nube](http://www.xaas.guru/del-bit-a-la-nube/)
 
