@@ -9,9 +9,9 @@
  * posible, de las buenas) como recompensa por mi contribución.
  * -----------------------------------------------------------------------------
  */
-package edu.upc.moo.tutoriales;
+package info.macias.tutoriales;
 
-import edu.upc.moo.Ventana;
+import info.macias.Ventana;
 import java.awt.Color;
 
 public class Tutorial1_HolaMundo {

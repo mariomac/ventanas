@@ -1,0 +1,22 @@
+### NetBeans template
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+### JetBrains template
+.idea
+
+*.iws
+*.ipr
+*.iml
+
+## Plugin-specific files:
+
+# IntelliJ
+/out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/

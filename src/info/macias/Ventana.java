@@ -9,16 +9,20 @@
  * posible, de las buenas) como recompensa por mi contribución.
  * -----------------------------------------------------------------------------
  */
-package edu.upc.moo;
+package info.macias;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.font.FontRenderContext;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.io.FileInputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
 
 /**
  * <p>Esta clase oculta toda la complejidad que hay detrás de la creación de ventanas,
@@ -30,7 +34,7 @@ import javax.swing.JPanel;
  * y quieres aprender cosas por tu propia satisfacción, siéntete libre de investigar
  * cada línea de código, intentar modificarlo o ampliarlo.</p>
  *
- * <p>El modo de funcionamiento del dibujo es el siguiente: todo lo que se dibuje 
+ * <p>El modo de funcionamiento del dibujo es el siguiente: todo lo que se dibuje
  * (mediante las funciones escribeTexto, dibujaCirculo, etc...), se irá dibujando en un lienzo oculto.
  * Una vez se ha acabado de dibujar el lienzo, se llamará al método "actualizaFotograma",
  * que mostrará el lienzo en la pantalla.</p>
@@ -43,12 +47,12 @@ public class Ventana {
      * que se puede mostrar el lienzo por pantalla en un segundo.
      */
     private static final long FOTOGRAMAS_SEGUNDO = 30;
-    
+
     private static final float INTERLINEADO = 1.1f;
 
     //dos lienzos para el double buffer
     private Image lienzo ;
-    
+
     private Graphics2D fg;
 
     private JFrame marcoVentana = null;
@@ -58,17 +62,23 @@ public class Ventana {
 
     private double camX, camY, campoVisionH, campoVisionV;
     private boolean dibujaCoordenadas = false;
-    
+
     private double lienzoAnchura, lienzoAltura;
     private double aspectRatioH, aspectRatioV;
-    
+
     private double ratonX, ratonY;
     private boolean ratonPulsado;
     private Color colorFondo = Color.black;
+
+    private Map<String, Image> cacheImagenes = new HashMap<>();
+
+    // Substitutivo para mostrar cuando una imagen no se ha encontrado
+    private Image imagenNoEncontrada;
+
     /**
      * Crea una nueva ventana.<br/>
      * <b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.
-     * @param titulo El texto que aparecerá en la barra de título de la ventana. 
+     * @param titulo El texto que aparecerá en la barra de título de la ventana.
      */
     public Ventana(String titulo) {
         this(titulo,640,480);
@@ -98,22 +108,122 @@ public class Ventana {
         marcoVentana.setResizable(false);
         marcoVentana.setContentPane(pantalla);
         marcoVentana.setVisible(true);
-        
+
         Rectangle bounds = pantalla.getBounds();
         lienzoAnchura = bounds.width;
         lienzoAltura = bounds.height;
         lienzo = new BufferedImage((int)lienzoAnchura, (int)lienzoAltura, BufferedImage.TYPE_INT_RGB);
-        fg = (Graphics2D)lienzo.getGraphics();                
-        
+        fg = (Graphics2D)lienzo.getGraphics();
+
         camara = new AffineTransform(0,0,1,0,0,1);
         setCamara(0, 0, 20);
         fg.setTransform(camara);
-        
+
+        fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         //borrarLienzoOculto();
         marcoVentana.addKeyListener(new LectorTeclas());
 
+        crearImagenNoEncontrada();
+        iniciaFontRenderContext();
+
     }
-    
+
+    private void crearImagenNoEncontrada() {
+        final int red = 0xff0000, white = 0xffffff, blue = 0xff, gray = 0x888888, black = 0;
+        char[][] img = {
+                "bb   ,,,,,,     ".toCharArray(),
+                "b    , ,,,,     ".toCharArray(),
+                "     , ,,,,     ".toCharArray(),
+                "     ,,,,,,     ".toCharArray(),
+                "   x x    x x   ".toCharArray(),
+                "    x      x    ".toCharArray(),
+                "   x x    x x   ".toCharArray(),
+                "    ...x....    ".toCharArray(),
+                "   ....xx....   ".toCharArray(),
+                "   ..........   ".toCharArray(),
+                "   ...xxxx...   ".toCharArray(),
+                "   ..x.xx.x..   ".toCharArray(),
+                " b .x......x.   ".toCharArray(),
+                " b ..........   ".toCharArray(),
+                "   ..........   ".toCharArray(),
+        };
+
+        imagenNoEncontrada = new BufferedImage(img[0].length, img.length, BufferedImage.TYPE_INT_RGB);
+        Graphics g = imagenNoEncontrada.getGraphics();
+        for(int y = 0 ; y < img.length ; y++) {
+            for (int x = 0; x < img[y].length; x++) {
+                int col;
+                switch (img[y][x]) {
+                    case ',':
+                        col = gray;
+                        break;
+                    case ' ':
+                        col = blue;
+                        break;
+                    case 'x':
+                        col = red;
+                        break;
+                    case '.':
+                        col = white;
+                        break;
+                    case 'b':
+                    default:
+                        col = black;
+                }
+                g.setColor(new Color(col));
+                g.drawRect(x,y,1,1);
+            }
+        }
+
+
+    }
+
+    private Image imagen(String archivo) {
+        Image img = cacheImagenes.get(archivo);
+        if(img == null) {
+            try {
+                img = ImageIO.read(getClass().getResourceAsStream(archivo));
+            } catch (Exception e) {
+                try {
+                    img = ImageIO.read(new FileInputStream(archivo));
+                } catch (Exception e1) {
+                    System.err.println("No se ha podido leer la imagen " + archivo);
+                    System.err.println(e.getMessage());
+                    System.err.println(e1.getMessage());
+                    img = imagenNoEncontrada;
+                }
+            }
+            cacheImagenes.put(archivo, img);
+        }
+        return img;
+    }
+
+    /**
+     * Dibuja en pantalla una imagen de un archivo. La mostrará ajustada al
+     * rectángulo delimitado por según las coordenadas de una esquina superior izquierda,
+     * anchura y altura.
+     *
+     * @param archivo Ruta y nombre del archivo que contiene la imagen a mostrar
+     * @param izquierda Coordenada del lado más a la izquierda del rectángulo
+     *                  sobre el cual se mostrará la imagen
+     * @param arriba Coordenada del lado superior del rectángulo sobre el cual
+     *               se mostrará la imagen
+     * @param ancho Anchura de la imagen mostrada
+     * @param alto Altura de la imagen mostrada
+     */
+    public void dibujaImagen(String archivo, double izquierda, double arriba, double ancho, double alto) {
+        Image img = imagen(archivo);
+
+        AffineTransform posicion = new AffineTransform();
+
+        posicion.translate(izquierda, arriba);
+        posicion.scale(ancho / img.getWidth(null), - alto / img.getWidth(null));
+
+        fg.drawImage(img, posicion, null);
+    }
+
+
     /**
      * Cambia las coordenadas y el campo de visi&oacute;n de la c&aacute;mara.
      * @param centroX Posici&oacute;n X donde apunta el centro de la c&aacute;mara
@@ -122,7 +232,7 @@ public class Ventana {
      */
     public final void setCamara(double centroX, double centroY, double tamanyoCampoVision) {
         camX = centroX; camY = centroY;
-        
+
         if(lienzoAnchura > lienzoAltura) {
             aspectRatioH = lienzoAnchura / lienzoAltura;
             aspectRatioV = 1;
@@ -132,17 +242,17 @@ public class Ventana {
         }
         campoVisionH = (tamanyoCampoVision * aspectRatioH);
         campoVisionV = (tamanyoCampoVision * aspectRatioV);
-                        
+
         double min = Math.min(lienzoAnchura / tamanyoCampoVision, lienzoAltura / tamanyoCampoVision);
         camara.setToIdentity();
         camara.translate(lienzoAnchura/2, lienzoAltura/2);
         camara.scale(min, -min);
         camara.translate(-centroX, -centroY);
-        
+
         fg.setTransform(camara);
-        
+
     }
-    
+
     /**
      * Comprueba si la flecha "Arriba" del cursor está pulsada o no.
      * @return true si está pulsada. false en caso contrario.
@@ -171,7 +281,7 @@ public class Ventana {
     public boolean isPulsadoDerecha() {
         return right;
     }
-    
+
     /**
      * Comprueba si la tecla "Escape" está pulsada o no.
      * @return  true si Escape está pulsado. False en caso contrario.
@@ -181,7 +291,7 @@ public class Ventana {
         escPulsado = false;
         return esc;
     }
-    
+
     /**
      * Comprueba si la barra espaciadora está pulsada o no.
      * <b>NOTA:</b> a diferencia de los cursores, la barra espaciadora debe
@@ -197,22 +307,22 @@ public class Ventana {
         }
     }
 
-    /** 
+    /**
      * Muestra una cuadrícula con las coordenadas de la escena. Esta funcionalidad
      * puede ser útil en la etapa de desarrollo del programa, para ayudarnos
      * a colocar los diferentes objetos en pantalla.
      *
      * <p>También puedes habilitar o deshabilitar la cuadrícula pulsando la tecla
      * F1 cuando la ventana está abierta y actualizándose.
-     * 
+     *
      * @param dibujaCoordenadas true si se quiere mostrar la cuadricula; false en caso contrario
      */
     public void setDibujaCoordenadas(boolean dibujaCoordenadas) {
         this.dibujaCoordenadas = dibujaCoordenadas;
-    }    
-    
+    }
+
     private void dibujaCoordenadas() {
-        Stroke last = fg.getStroke();        
+        Stroke last = fg.getStroke();
 
         float cv = (float)Math.min(campoVisionH,campoVisionV);
         Stroke flojo = new BasicStroke((float)(0.5/cv), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, new float[] { 1.0f/cv, 5.0f/cv }, 0.0f);
@@ -230,10 +340,10 @@ public class Ventana {
             } else {
                 fg.setStroke(flojo);
             }
-            l.setLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);            
+            l.setLine(x, camY - campoVisionV / 2, x, camY + campoVisionV / 2);
             fg.draw(l);
             //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
-        }   
+        }
         for(int y = (int) (camY - campoVisionV / 2) ; y <= (int) (camY + campoVisionV / 2) ; y++) {
             if(y % 10 == 0) {
                 fg.setStroke(gordo);
@@ -243,10 +353,10 @@ public class Ventana {
             } else {
                 fg.setStroke(flojo);
             }
-            l.setLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);            
+            l.setLine(camX - campoVisionH / 2, y, camX + campoVisionH / 2, y);
             fg.draw(l);
             //fg.drawLine((int)x, (int)( camY - campoVisionV / 2), (int)x, (int)(camY + campoVisionV / 2));
-        }            
+        }
         fg.setStroke(last);
     }
 
@@ -257,30 +367,39 @@ public class Ventana {
         marcoVentana.dispose();
     }
 
-    private int ultimoTamanyo = 0;
-    private Font ultimaFuente = new Font(Font.SANS_SERIF,Font.PLAIN,12);;
+    private static final int TAMAÑO_FUENTE_BASE = 28;
+    private Font font = new Font(Font.SANS_SERIF, Font.PLAIN, TAMAÑO_FUENTE_BASE);
+    private FontRenderContext fontRenderContext = null;
+    private void iniciaFontRenderContext() {
+        fontRenderContext = marcoVentana.getFontMetrics(font).getFontRenderContext();
+    }
+
     /**
      * Escribe un texto por pantalla.
      * @param texto El texto a escribir.
      * @param x Coordenada izquierda del inicio del texto.
      * @param y Coordenada superior del inicio del texto.
-     * @param medidaFuente Tamaño de la fuente, en píxels.
+     * @param altoFuente Alto de la fuente
      * @param color Color del texto.
      */
-    public void escribeTexto(String texto, double x, double y, int medidaFuente, Color color) {
-        float interlinea = INTERLINEADO * (float) medidaFuente;
+    public void escribeTexto(String texto, double x, double y, double altoFuente, Color color) {
+        double interlinea = INTERLINEADO * altoFuente;
         String[] lineas = texto.split("\n");
-        camara.scale(1, -1);
-        fg.setTransform(camara);
         fg.setColor(color);
-        if(ultimoTamanyo != medidaFuente) {
-            ultimaFuente = new Font(Font.MONOSPACED,Font.PLAIN,medidaFuente);
-        }
-        fg.setFont(ultimaFuente);
+
+        AffineTransform posicion = (AffineTransform) camara.clone();
+        posicion.translate(x, y);
+        posicion.scale(altoFuente/TAMAÑO_FUENTE_BASE, -altoFuente/TAMAÑO_FUENTE_BASE);
+        fg.setTransform(posicion);
+
         for(int i = 0 ; i < lineas.length ; i++) {
-            fg.drawString(lineas[i], (float)x, (float)-y + i * interlinea);
+            Shape txt = font.createGlyphVector(fontRenderContext, lineas[i]).getOutline();
+            fg.fill(txt);
+            posicion.translate(0, interlinea);
+
+            //
+//            fg.drawString(lineas[i], (float)x, (float)-y + i * interlinea);
         }
-        camara.scale(1, -1);
         fg.setTransform(camara);
     }
 
@@ -292,25 +411,25 @@ public class Ventana {
      * @param color Color del triángulo.
      */
     public void dibujaTriangulo(double x1, double y1, double x2, double y2, double x3, double y3, Color color){
-        fg.setColor(color);        
+        fg.setColor(color);
         Path2D.Double t = new Path2D.Double();
-        
+
         t.moveTo(x1, y1);
         t.lineTo(x2, y2);
         t.lineTo(x3, y3);
         t.lineTo(x1, y1);
-        fg.fill(t);        
+        fg.fill(t);
     }
-    
+
     /**
      * Dibuja un segmento de línea entre los puntos (x1,y2) y (x2, y2), con un grosor y un color dados.
-     * @param x1,y1 Coordenadas x,y del primer punto 
+     * @param x1,y1 Coordenadas x,y del primer punto
      * @param x2,y2 Coordenadas x,y del segundo punto
      * @param grosor Grosor de la línea
      * @param color Color de la línea
      */
     public void dibujaLinea(double x1, double y1, double x2, double y2, double grosor, Color color) {
-        Stroke last = fg.getStroke();        
+        Stroke last = fg.getStroke();
         fg.setColor(color);
         fg.setStroke(new BasicStroke((float)grosor,BasicStroke.CAP_BUTT,BasicStroke.JOIN_MITER));
         Line2D.Double l = new Line2D.Double();
@@ -321,11 +440,11 @@ public class Ventana {
     /**
      * Dibuja un rectángulo en pantalla, dadas las coordenadas de su esquina superior izquierda,
      * su anchura y su altura.
-     * 
+     *
      * @param izquierda Coordenada del lado más a la izquierda del rectángulo.
      * @param arriba Coordenada del lado superior del rectángulo.
-     * @param ancho Anchura del rectángulo, en pixels.
-     * @param alto Altura del rectángulo, en píxels.
+     * @param ancho Anchura del rectángulo.
+     * @param alto Altura del rectángulo.
      * @param color Color del rectángulo.
      */
     public void dibujaRectangulo(double izquierda, double arriba, double ancho, double alto, Color color) {
@@ -335,10 +454,10 @@ public class Ventana {
 
     /**
      * Dibuja un círculo por pantalla.
-     * @param centroX Coordenada X del centro del círculo (en píxels).
-     * @param centroY Coordenada Y del centro del círculo (en píxels).
-     * @param radio Radio del círculo, en píxels.
-     * @param color Color del círculo.
+     * @param centroX Coordenada X del centro del círculo
+     * @param centroY Coordenada Y del centro del círculo
+     * @param radio Radio del círculo
+     * @param color Color del círculo
      */
     public void dibujaCirculo(double centroX, double centroY, double radio, Color color) {
         fg.setColor(color);
@@ -353,38 +472,38 @@ public class Ventana {
     public void actualizaFotograma() {
         //dibuja cuadricula
         if(dibujaCoordenadas) dibujaCoordenadas();
-        
+
         // muestra el buffer
         marcoVentana.repaint();
 
         espera();
-        
+
         //borra el buffer
-        fg.setTransform(identity);        
+        fg.setTransform(identity);
         fg.setColor(colorFondo);
         fg.fillRect(0, 0, (int)lienzoAnchura, (int)lienzoAltura);
         fg.setTransform(camara);
-        
 
-        
+
+
     }
 
     /**
      * Cambia el color del fondo de la ventana.
-     * 
+     *
      * @param colorFondo Color del fondo de la ventana.
      */
     public void setColorFondo(Color colorFondo) {
         this.colorFondo = colorFondo;
     }
-    
-    
-    
+
+
+
     private AffineTransform identity = new AffineTransform();
 
     private long lastFrameTime = 0;
 
-    private void espera() {         
+    private void espera() {
         long now = System.currentTimeMillis();
         try {
             long sleepTime = (1000 / FOTOGRAMAS_SEGUNDO) - (now - lastFrameTime);
@@ -416,7 +535,7 @@ public class Ventana {
         private boolean spaceReleased = true;
 
         public void keyTyped(KeyEvent e) {
-    
+
         }
 
         public void keyPressed(KeyEvent e) {
@@ -495,16 +614,16 @@ public class Ventana {
     /**
      * Devuelve la coordenada Y del rat&oacute;n
      * @return la coordenada Y del rat&oacute;n
-     */    
+     */
     public double getRatonY() {
         return mouseEventPos == null ? 0 :
                 - ((double)mouseEventPos.getY() * campoVisionV) / lienzoAltura + campoVisionV / 2 + camY;
     }
-    
-    
+
+
     private MouseEvent mouseEventPos = null;
     private class LectorRaton implements MouseListener, MouseMotionListener {
-        @Override 
+        @Override
         public void mousePressed(MouseEvent me) {
             ratonPulsado = true;
         }
@@ -519,7 +638,7 @@ public class Ventana {
         @Override public void mouseDragged(MouseEvent me) {
             mouseEventPos = me;
         }
-        
+
         @Override public void mouseEntered(MouseEvent me) { }
         @Override public void mouseExited(MouseEvent me) { }
         @Override public void mouseClicked(MouseEvent me) {}

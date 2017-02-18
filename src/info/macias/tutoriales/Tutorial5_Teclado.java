@@ -9,27 +9,37 @@
  * posible, de las buenas) como recompensa por mi contribución.
  * -----------------------------------------------------------------------------
  */
-package edu.upc.moo.tutoriales;
+package info.macias.tutoriales;
 
-import edu.upc.moo.Ventana;
+import info.macias.Ventana;
 import java.awt.Color;
+import java.util.Random;
 
-public class Tutorial2_Figuras {
+public class Tutorial5_Teclado {
     public static void main(String[] args) {
+        Random rnd = new Random();
+        
         // Crea una nueva ventana
-        Ventana v = new Ventana("Tutorial 2: Figuras geométricas");
-        // Mientras no se pulsa la tecla ESCAPE, se redibuja siempre lo mismo en pantalla
+        Ventana v = new Ventana("Tutorial 5: Uso del teclado");
+        
+        // Coordenadas del círculo que moveremos
+        double posX = 0, posY = 0;
+        double velocidad = 0.4;
+        Color colorBola = Color.blue;
+        v.setCamara(0, 0, 40);
+        
         while(!v.isPulsadoEscape()) {
-            v.dibujaCirculo(-5, 5, 5, Color.red);
-            v.dibujaTriangulo(5, 10, 10, 0, 0, 0, Color.yellow);
-            v.dibujaRectangulo(-10,0,10,10, Color.blue);
-            // se pueden dibujar lineas de diferente grosor
-            double grosor = 0.1;
-            for(double x = 0; x < 10 ; x += grosor * 2) {
-                v.dibujaLinea(x, 0, x, -10, grosor, Color.green);
-                grosor *= 1.5;
+            if(v.isPulsadoArriba()) posY += velocidad;
+            if(v.isPulsadoAbajo()) posY -= velocidad;
+            if(v.isPulsadoDerecha()) posX += velocidad;
+            if(v.isPulsadoIzquierda()) posX -= velocidad;
+            if(v.isPulsadoEspacio()) {
+                colorBola = new Color(rnd.nextInt());
             }
-            v.escribeTexto("(Pulsa ESC para terminar)", -10, -9, 1, Color.white);
+            v.dibujaCirculo(posX, posY, 3, colorBola);
+            
+            v.escribeTexto("Usa las teclas de dirección para mover la bola", -20, -15, 2, Color.WHITE);
+            v.escribeTexto("Pulsa espacio para cambiar el color de la bola", -20, -17, 2, Color.WHITE);
             // Muestra el fotograma anterior, y crea uno nuevo
             v.actualizaFotograma();
         }   

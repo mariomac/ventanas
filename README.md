@@ -8,8 +8,8 @@ en la programación en el lenguaje Java y estén aburridos de usar la insulsa
 línea de comandos (System.out.println) en sus programas. Para todos ellos he 
 reado una clase llamada Ventana, cuyo código puedes descargarte y usar
 ibremente, que te permitirá crear ventanas donde dibujar gráficos sencillos,
-escribir textos de diferentes tamaños y colores, así como leer el estado del
-ratón y del teclado.
+escribir textos de diferentes tamaños y colores, mostrar imágenes guardadas en
+archivos de disco, así como leer el estado del ratón y del teclado.
 
 Para ver ejemplos de uso, basta con abrir el proyecto en Netbeans y ejecutar
 algunos de sus tutoriales.
@@ -25,6 +25,8 @@ Some screenshots:
 ![](shot2.jpg)
 
 ![](shot3.jpg)
+
+![](shot4.png)
 
 Si te gustan mis aportaciones a github, quizás te gustará mi libro [Del bit a la Nube](http://www.xaas.guru/del-bit-a-la-nube/)
 
