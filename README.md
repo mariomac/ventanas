@@ -14,9 +14,12 @@ archivos de disco, así como leer el estado del ratón y del teclado.
 Para ver ejemplos de uso, basta con abrir el proyecto en Netbeans y ejecutar
 algunos de sus tutoriales.
 
-También puedes echarle un vistazo al [javadoc de la clase Ventana](http://mario.site.ac.upc.edu/ventanas/Ventana.html).
+También puedes echarle un vistazo al [javadoc de la clase Ventana](http://mario.site.ac.upc.edu/ventanas/info/macias/Ventana.html).
 
-Para ver un ejemplo de uso más complejo, puedes echar un vistazo a [MOO Pang!](https://github.com/mariomac/MOOPang)
+Para ver un ejemplo de uso más complejo, puedes echar un vistazo a estos dos videojuegos:
+ 
+* [MOO Pang!](https://github.com/mariomac/MOOPang) (usando una versión antigua)
+* [Marcianitos](https://github.com/mariomac/marcianitos)
 
 Some screenshots:
 

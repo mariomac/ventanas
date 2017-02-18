@@ -70,22 +70,22 @@ public class Ventana {
     private boolean ratonPulsado;
     private Color colorFondo = Color.black;
 
-    private Map<String, Image> cacheImagenes = new HashMap<>();
+    private Map<String, Image> cacheImagenes = new HashMap<String, Image>();
 
     // Substitutivo para mostrar cuando una imagen no se ha encontrado
     private Image imagenNoEncontrada;
 
     /**
-     * Crea una nueva ventana.<br/>
-     * <b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.
+     * <p>Crea una nueva ventana.</p>
+     * <p><b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.</p>
      * @param titulo El texto que aparecerá en la barra de título de la ventana.
      */
     public Ventana(String titulo) {
         this(titulo,640,480);
     }
     /**
-     * Crea una nueva ventana.<br/>
-     * <b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.
+     * <p>Crea una nueva ventana.</p>
+     * <p><b>NOTA</b>: Si se cierra la ventana con el ratón, el programa acabará.</p>
      * @param titulo El texto que aparecerá en la barra de título de la ventana.
      * @param ancho Anchura de la ventana en píxels
      * @param alto Altura de la ventana en píxels
