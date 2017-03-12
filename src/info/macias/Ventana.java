@@ -70,10 +70,10 @@ public class Ventana {
     private boolean ratonPulsado;
     private Color colorFondo = Color.black;
 
-    private Map<String, Image> cacheImagenes = new HashMap<String, Image>();
+    private Map<String, BufferedImage> cacheImagenes = new HashMap<String, BufferedImage>();
 
     // Substitutivo para mostrar cuando una imagen no se ha encontrado
-    private Image imagenNoEncontrada;
+    private BufferedImage imagenNoEncontrada;
 
     /**
      * <p>Crea una nueva ventana.</p>
@@ -119,14 +119,33 @@ public class Ventana {
         setCamara(0, 0, 20);
         fg.setTransform(camara);
 
-        fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        setSuavizado(false);
 
-        //borrarLienzoOculto();
         marcoVentana.addKeyListener(new LectorTeclas());
 
         crearImagenNoEncontrada();
         iniciaFontRenderContext();
 
+    }
+
+    /**
+     * <p>Activa o desactiva el suavizado de los gráficos en pantalla. Esta función también puede
+     * activarse o desactivarse pulsando la tecla F2 cuando la ventana está abierta</p>
+     *
+     * <p>NOTA: activar el suavizado consume más recursos de tu ordenador, por lo que tenerlo activado
+     * en un ordenador antiguo y/o poco pontente puede hacer que algunos programas vayan más lentos
+     * (o más bruscos)</p>
+     *
+     * @param suavizado
+     */
+    public void setSuavizado(boolean suavizado) {
+        if(suavizado) {
+            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            fg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        } else {
+            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+            fg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        }
     }
 
     private void crearImagenNoEncontrada() {
@@ -180,7 +199,7 @@ public class Ventana {
     }
 
     private Image imagen(String archivo) {
-        Image img = cacheImagenes.get(archivo);
+        BufferedImage img = cacheImagenes.get(archivo);
         if(img == null) {
             try {
                 img = ImageIO.read(getClass().getResourceAsStream(archivo));
@@ -197,6 +216,36 @@ public class Ventana {
             cacheImagenes.put(archivo, img);
         }
         return img;
+    }
+
+    public void dibujaAnimacion(String archivoImagen, double izquierda, double arriba, double ancho,
+                                    double alto, int fotogramas, long msFotograma) {
+        BufferedImage img = (BufferedImage) imagen(archivoImagen);
+
+        AffineTransform posicion = new AffineTransform();
+
+        long fotogramaActual = (lastFrameTimeNanos % (fotogramas * msFotograma * 1000000)) / (msFotograma * 1000000);
+        int anchoFotograma = img.getWidth(null) / fotogramas;
+
+        double correccionVert  = - alto / img.getHeight(null);
+
+        double transX = izquierda - fotogramaActual * ancho;
+        double transY = arriba + correccionVert;
+        posicion.translate(transX, transY);
+        double scaleX = ancho * fotogramas / img.getWidth(null);
+        double scaleY = correccionVert;
+        posicion.scale(scaleX, scaleY);
+
+        Shape clipAnterior = fg.getClip();
+
+        fg.setColor(Color.RED);
+        Rectangle2D.Double nuevoClip = new Rectangle2D.Double(izquierda, arriba - alto, ancho, alto);
+//        fg.draw(nuevoClip);
+        fg.setClip(nuevoClip);
+
+        fg.drawImage(img, posicion, null);
+        fg.setClip(clipAnterior);
+
     }
 
     /**
@@ -217,9 +266,9 @@ public class Ventana {
 
         AffineTransform posicion = new AffineTransform();
 
-        posicion.translate(izquierda, arriba);
-        posicion.scale(ancho / img.getWidth(null), - alto / img.getWidth(null));
-
+        double correccionAlto  = - alto / img.getHeight(null);
+        posicion.translate(izquierda, arriba + correccionAlto);
+        posicion.scale(ancho / img.getWidth(null), + correccionAlto);
         fg.drawImage(img, posicion, null);
     }
 
@@ -385,7 +434,6 @@ public class Ventana {
      * @param color Color del texto.
      */
     public void escribeTexto(String texto, double x, double y, double altoFuente, Color color) {
-        double interlinea = INTERLINEADO * altoFuente;
         String[] lineas = texto.split("\n");
         fg.setColor(color);
 
@@ -498,21 +546,21 @@ public class Ventana {
 
     private AffineTransform identity = new AffineTransform();
 
-    private long lastFrameTime = 0;
+    private long lastFrameTimeNanos = 0;
 
     private void espera() {
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         try {
-            long sleepTime = (1000 / FOTOGRAMAS_SEGUNDO) - (now - lastFrameTime);
+            long sleepTime = (1000000000 / FOTOGRAMAS_SEGUNDO) - (now - lastFrameTimeNanos);
             if(sleepTime <= 0) {
                 Thread.yield();
             } else {
-                Thread.sleep(sleepTime);
+                Thread.sleep(sleepTime / 1000000, (int) (sleepTime % 1000000));
             }
         } catch (InterruptedException ex) {
             Logger.getLogger(Ventana.class.getName()).log(Level.SEVERE, null, ex);
         }
-        lastFrameTime = System.currentTimeMillis();
+        lastFrameTimeNanos = System.nanoTime();
     }
 
     private class ControladorVentana implements WindowListener {
@@ -564,9 +612,9 @@ public class Ventana {
                 case KeyEvent.VK_F2:
                     synchronized (fg) {
                         if (fg.getRenderingHint(RenderingHints.KEY_ANTIALIASING) == RenderingHints.VALUE_ANTIALIAS_ON) {
-                            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+                            setSuavizado(false);
                         } else {
-                            fg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                            setSuavizado(true);
                         }
                     }
             }
