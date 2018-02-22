@@ -218,6 +218,22 @@ public class Ventana {
         return img;
     }
 
+    /**
+     * Dibuja una imagen animada a partir de un archivo de imagen en el cual los
+     * diferentes fotogramas están dibujados en horizontal, siendo todos del
+     * mismo tamaño.
+     * 
+     * @param archivoImagen Ruta y nombre del archivo que contiene la imagen a mostrar
+     * @param izquierda Coordenada del lado más a la izquierda del rectángulo
+     *                  sobre el cual se mostrará la imagen
+     * @param arriba Coordenada del lado superior del rectángulo sobre el cual
+     *               se mostrará la imagen
+     * @param ancho Anchura de la imagen mostrada
+     * @param alto Altura de la imagen mostrada
+     * @param fotogramas Número de fotogramas que tiene la animación
+     * @param msFotograma Milisegundos durante los cuales cada fotograma se dibujará,
+     *                    antes de mostrarse el siguiente fotograma.
+     */
     public void dibujaAnimacion(String archivoImagen, double izquierda, double arriba, double ancho,
                                     double alto, int fotogramas, long msFotograma) {
         BufferedImage img = (BufferedImage) imagen(archivoImagen);
